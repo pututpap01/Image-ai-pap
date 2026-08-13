@@ -1,0 +1,6 @@
+{
+  "name": "AI Image Craft",
+  "description": "Modern AI Image Generator app embedding Perchance AI with custom native Jetpack Compose controls and style customizer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
