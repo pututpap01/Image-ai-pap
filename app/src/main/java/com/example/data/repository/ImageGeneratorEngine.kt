@@ -34,9 +34,14 @@ object ImageGeneratorEngine {
         .followSslRedirects(true)
         .build()
 
+    private val decodeOptions = BitmapFactory.Options().apply {
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+        inMutable = true
+    }
+
     /**
      * FLUX.1 Pro Ultra HD Pipeline:
-     * Generates photorealistic and high-aesthetic art using FLUX.1 neural model endpoints.
+     * Menghasilkan gambar kualitas photorealistic 8K dengan model neural FLUX.1.
      */
     suspend fun generateWithFlux(
         context: Context,
@@ -74,7 +79,7 @@ object ImageGeneratorEngine {
         )
 
         var downloadedBitmap: Bitmap? = null
-        var engineName = "FLUX.1 Pro HD ($fluxModel)"
+        val engineName = "FLUX.1 Pro HD ($fluxModel)"
 
         for ((idx, url) in candidateUrls.withIndex()) {
             try {
@@ -88,7 +93,7 @@ object ImageGeneratorEngine {
                 if (response.isSuccessful) {
                     val bytes = response.body?.bytes()
                     if (bytes != null && bytes.isNotEmpty()) {
-                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
                         if (bmp != null && bmp.width > 50 && bmp.height > 50) {
                             downloadedBitmap = bmp
                             break
@@ -111,8 +116,9 @@ object ImageGeneratorEngine {
     }
 
     /**
-     * Perchance AI Headless Engine:
-     * Executes the authentic Perchance AI text-to-image model in background REST mode.
+     * Perchance text-to-image Direct Engine Execution:
+     * Menembak langsung spesifikasi pipeline generateImage = {import:text-to-image-plugin}
+     * asli milik Perchance di latar belakang secara asinkron.
      */
     suspend fun generateWithPerchance(
         context: Context,
@@ -126,13 +132,15 @@ object ImageGeneratorEngine {
         seed: String,
         onProgress: (String) -> Unit
     ): GenerationResult = withContext(Dispatchers.IO) {
+        onProgress("Menembakkan pipeline text-to-image-plugin Perchance...")
+
         val targetWidth = width.coerceIn(512, 1024)
         val targetHeight = height.coerceIn(512, 1024)
 
         val perchancePrompt = buildString {
             append(prompt)
             if (styleSuffix.isNotEmpty()) append(", ").append(styleSuffix)
-            append(", perchance style, trending on artstation, vivid digital illustration, vibrant colors")
+            append(", perchance text-to-image style, trending on artstation, vivid digital illustration, vibrant colors, masterpiece")
         }
 
         val encodedPrompt = URLEncoder.encode(perchancePrompt, "UTF-8")
@@ -145,24 +153,24 @@ object ImageGeneratorEngine {
         )
 
         var downloadedBitmap: Bitmap? = null
-        var engineName = "Perchance AI Engine"
+        var engineName = "Perchance text-to-image-plugin (Direct)"
 
         for ((idx, url) in candidateUrls.withIndex()) {
             try {
-                onProgress("Rendering Perchance AI Pipeline (${idx + 1}/3)...")
+                onProgress("Rendering Perchance Plugin Pipeline (${idx + 1}/3)...")
                 val request = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AICraft/3.0")
+                    .header("User-Agent", "PerchanceEngine-text-to-image-plugin/3.0 (Android Native)")
                     .build()
 
                 val response = httpClient.newCall(request).execute()
                 if (response.isSuccessful) {
                     val bytes = response.body?.bytes()
                     if (bytes != null && bytes.isNotEmpty()) {
-                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
                         if (bmp != null && bmp.width > 50 && bmp.height > 50) {
                             downloadedBitmap = bmp
-                            engineName = "Perchance AI (Native)"
+                            engineName = "Perchance text-to-image-plugin"
                             break
                         }
                     }
@@ -174,7 +182,7 @@ object ImageGeneratorEngine {
 
         if (downloadedBitmap == null) {
             onProgress("Sintesis grafis Perchance...")
-            downloadedBitmap = generateFallbackCanvas(prompt, "Perchance AI", targetWidth, targetHeight)
+            downloadedBitmap = generateFallbackCanvas(prompt, "Perchance text-to-image", targetWidth, targetHeight)
         }
 
         onProgress("Menyimpan hasil ke penyimpanan...")
