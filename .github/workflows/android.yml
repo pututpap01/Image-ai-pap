@@ -15,16 +15,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Set up Gradle 8.11.1
+      - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
+
+      - name: Setup Android SDK and Licenses
+        uses: android-actions/setup-android@v3
 
       - name: Prepare Keystore and Environment
         run: |
@@ -42,13 +45,6 @@ jobs:
             else
               touch .env
             fi
-          fi
-
-          # 3. Accept Android SDK Licenses if sdkmanager is available
-          if command -v sdkmanager &> /dev/null; then
-            yes | sdkmanager --licenses || true
-          elif [ -n "$ANDROID_HOME" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
           fi
 
       - name: Build Debug APK
