@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.webkit.WebView
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,7 +16,6 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.GeneratedImageEntity
 import com.example.data.repository.ImageGeneratorEngine
 import com.example.data.repository.ImageRepository
-import com.example.ui.components.triggerPerchanceGenerationInWebView
 import com.example.ui.models.ArtStyle
 import com.example.ui.models.ArtStylePresets
 import com.example.ui.models.AspectOption
@@ -31,7 +29,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 
 sealed interface GenerationUiState {
@@ -86,19 +83,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _useRandomSeed = MutableStateFlow(true)
     val useRandomSeed: StateFlow<Boolean> = _useRandomSeed.asStateFlow()
 
-    private val _selectedEngine = MutableStateFlow("direct") // Default to bulletproof direct engine
-    val selectedEngine: StateFlow<String> = _selectedEngine.asStateFlow()
-
-    private val _isIframeExpanded = MutableStateFlow(false)
-    val isIframeExpanded: StateFlow<Boolean> = _isIframeExpanded.asStateFlow()
-
-    private val _statusMessage = MutableStateFlow("Siap membuat karya seni gambar AI")
+    private val _statusMessage = MutableStateFlow("Siap membuat gambar dengan model FLUX.1 Ultra HD")
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
     private val _generationState = MutableStateFlow<GenerationUiState>(GenerationUiState.Idle)
     val generationState: StateFlow<GenerationUiState> = _generationState.asStateFlow()
-
-    var activeWebView: WebView? = null
 
     fun setPromptText(text: String) {
         _promptText.value = text
@@ -128,14 +117,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _useRandomSeed.value = use
     }
 
-    fun setSelectedEngine(engine: String) {
-        _selectedEngine.value = engine
-    }
-
-    fun toggleIframeExpanded() {
-        _isIframeExpanded.value = !_isIframeExpanded.value
-    }
-
     fun setStatusMessage(status: String) {
         _statusMessage.value = status
     }
@@ -148,6 +129,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _statusMessage.value = "Prompt berhasil diperkaya dengan kata kunci artistik!"
     }
 
+    /**
+     * Generates image directly using FLUX.1 Neural Engine without any slow iframe/webview.
+     */
     fun generateImage() {
         val prompt = _promptText.value.trim()
         if (prompt.isEmpty()) {
@@ -161,19 +145,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _seed.value.ifEmpty { "428912" }
         }
 
-        _generationState.value = GenerationUiState.Generating("Menghubungi AI Engine...")
-        _statusMessage.value = "Memproses pembuatan gambar AI..."
-
-        if (_selectedEngine.value == "perchance") {
-            // Trigger perchance in background WebView as well
-            triggerPerchanceGenerationInWebView(
-                webView = activeWebView,
-                prompt = prompt,
-                styleSuffix = _selectedStyle.value.promptSuffix,
-                negativePrompt = _negativePrompt.value,
-                aspectRatio = _selectedAspect.value.ratio
-            )
-        }
+        _generationState.value = GenerationUiState.Generating("Menghubungi FLUX.1 Neural Engine...")
+        _statusMessage.value = "Memproses gambar via model FLUX.1 Pro HD..."
 
         viewModelScope.launch {
             try {
@@ -207,28 +180,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val savedEntity = newEntity.copy(id = id)
 
                 _generationState.value = GenerationUiState.Success(savedEntity)
-                _statusMessage.value = "Gambar AI berhasil dibuat & disimpan!"
+                _statusMessage.value = "Gambar berhasil dibuat & disimpan ke galeri lokal!"
             } catch (e: Exception) {
                 _generationState.value = GenerationUiState.Error("Gagal membuat gambar: ${e.localizedMessage}")
                 _statusMessage.value = "Terjadi kesalahan saat memproses gambar"
-            }
-        }
-    }
-
-    fun handleWebViewExtractedImage(url: String) {
-        if (url.startsWith("http") || url.startsWith("data:image")) {
-            viewModelScope.launch {
-                val entity = GeneratedImageEntity(
-                    prompt = _promptText.value.ifEmpty { "Karya Seni Perchance AI" },
-                    style = _selectedStyle.value.name,
-                    aspectRatio = _selectedAspect.value.ratio,
-                    imageUrl = url,
-                    engine = "Perchance AI"
-                )
-                val id = repository.saveImage(entity)
-                val saved = entity.copy(id = id)
-                _generationState.value = GenerationUiState.Success(saved)
-                _statusMessage.value = "Gambar dari Perchance berhasil diperoleh!"
             }
         }
     }

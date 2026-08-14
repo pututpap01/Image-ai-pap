@@ -1,15 +1,17 @@
 package com.example.ui.screens
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +20,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,17 +29,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -57,158 +59,119 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.data.local.GeneratedImageEntity
 import com.example.ui.components.AdvancedSettingsSheet
-import com.example.ui.components.AspectRatioSelector
 import com.example.ui.components.ImageResultDialog
-import com.example.ui.components.PerchanceWebView
-import com.example.ui.components.PromptPresetChips
-import com.example.ui.components.StyleSelector
-import com.example.ui.theme.AccentGradientEnd
-import com.example.ui.theme.AccentGradientStart
+import com.example.ui.models.ArtStyle
+import com.example.ui.models.ArtStylePresets
+import com.example.ui.models.AspectOption
+import com.example.ui.models.AspectRatioPresets
 import com.example.ui.viewmodel.GenerationUiState
 import com.example.ui.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val promptText by viewModel.promptText.collectAsState()
     val selectedStyle by viewModel.selectedStyle.collectAsState()
     val selectedAspect by viewModel.selectedAspect.collectAsState()
+    val statusMessage by viewModel.statusMessage.collectAsState()
+    val generationState by viewModel.generationState.collectAsState()
+
     val negativePrompt by viewModel.negativePrompt.collectAsState()
     val guidanceScale by viewModel.guidanceScale.collectAsState()
     val seed by viewModel.seed.collectAsState()
     val useRandomSeed by viewModel.useRandomSeed.collectAsState()
-    val selectedEngine by viewModel.selectedEngine.collectAsState()
-    val isIframeExpanded by viewModel.isIframeExpanded.collectAsState()
-    val statusMessage by viewModel.statusMessage.collectAsState()
-    val generationState by viewModel.generationState.collectAsState()
 
     var showAdvancedSheet by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 90.dp)
         ) {
-            // Header Bar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
+            // Header Hero Banner Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                )
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(AccentGradientStart, AccentGradientEnd)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.tertiary
                                     )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Text(
-                                text = "AI Image Craft",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Perchance Iframe & Direct Engine",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        IconButton(onClick = { showAdvancedSheet = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = "Pengaturan Lanjutan",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
-                    // Engine Selector Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = selectedEngine == "perchance",
-                            onClick = { viewModel.setSelectedEngine("perchance") },
-                            label = { Text("Iframe Perchance AI") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Code,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
-                            ),
-                            modifier = Modifier.testTag("engine_chip_perchance")
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "AI Image Generator",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Text(
+                            text = "FLUX.1 Ultra HD Neural Engine",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
-                        FilterChip(
-                            selected = selectedEngine == "direct",
-                            onClick = { viewModel.setSelectedEngine("direct") },
-                            label = { Text("Direct AI Engine") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.FlashOn,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
-                            ),
-                            modifier = Modifier.testTag("engine_chip_direct")
+                    IconButton(onClick = { showAdvancedSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Pengaturan Lanjutan",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             // Main Prompt Section
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = "Masukan Deskripsi/Prompt Gambar",
+                    text = "Masukan Deskripsi / Prompt Gambar",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -220,7 +183,7 @@ fun HomeScreen(
                     value = promptText,
                     onValueChange = { viewModel.setPromptText(it) },
                     placeholder = {
-                        Text("Contoh: Seekor kucing cerdas mengenakan jas koki di dapur restoran megah...")
+                        Text("Tulis deskripsi gambar detail yang ingin Anda buat...")
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -271,7 +234,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Prompt Presets Inspiration Chips
             PromptPresetChips(
@@ -280,7 +243,7 @@ fun HomeScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Style Selector Section
             StyleSelector(
@@ -288,55 +251,13 @@ fun HomeScreen(
                 onStyleSelected = { viewModel.setSelectedStyle(it) }
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Aspect Ratio Selector
             AspectRatioSelector(
                 selectedAspect = selectedAspect,
                 onAspectSelected = { viewModel.setSelectedAspect(it) }
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Embedded Iframe Section (Perchance WebView)
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Sematkan Frame Perchance AI",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    IconButton(onClick = { viewModel.toggleIframeExpanded() }) {
-                        Icon(
-                            imageVector = if (isIframeExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = "Perbesar Viewport",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                PerchanceWebView(
-                    onWebViewCreated = { webView ->
-                        viewModel.activeWebView = webView
-                    },
-                    onImageGenerated = { imageUrl ->
-                        viewModel.handleWebViewExtractedImage(imageUrl)
-                    },
-                    onStatusChange = { msg ->
-                        viewModel.setStatusMessage(msg)
-                    },
-                    isExpanded = isIframeExpanded,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -368,7 +289,7 @@ fun HomeScreen(
             }
         }
 
-        // Floating Bottom Action Button ("Buat Gambar AI")
+        // Floating Bottom Action Button
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -393,36 +314,45 @@ fun HomeScreen(
                 )
             ) {
                 if (generationState is GenerationUiState.Generating) {
-                    val stepText = (generationState as GenerationUiState.Generating).step
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.5.dp
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = stepText,
+                        text = (generationState as GenerationUiState.Generating).step,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.FlashOn,
                         contentDescription = null,
-                        tint = Color.White
+                        modifier = Modifier.size(22.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Buat Gambar AI Sekarang",
+                        text = "Generate Gambar AI",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        // Bottom Sheets & Dialogs
+        // Output Result Dialog
+        if (generationState is GenerationUiState.Success) {
+            val resultEntity = (generationState as GenerationUiState.Success).imageEntity
+            ImageResultDialog(
+                imageItem = resultEntity,
+                onFavoriteToggle = { viewModel.toggleFavorite(it) },
+                onSaveToGallery = { viewModel.saveImageToGallery(context, it) },
+                onDismissRequest = { viewModel.dismissResultDialog() }
+            )
+        }
+
+        // Advanced Settings Modal Sheet
         if (showAdvancedSheet) {
             AdvancedSettingsSheet(
                 negativePrompt = negativePrompt,
@@ -436,16 +366,170 @@ fun HomeScreen(
                 onDismissRequest = { showAdvancedSheet = false }
             )
         }
+    }
+}
 
-        if (generationState is GenerationUiState.Success) {
-            val successState = generationState as GenerationUiState.Success
-            val currentContext = androidx.compose.ui.platform.LocalContext.current
-            ImageResultDialog(
-                imageItem = successState.imageEntity,
-                onFavoriteToggle = { viewModel.toggleFavorite(it) },
-                onSaveToGallery = { viewModel.saveImageToGallery(currentContext, it) },
-                onDismissRequest = { viewModel.dismissResultDialog() }
+@Composable
+private fun PromptPresetChips(onPromptSelected: (String) -> Unit) {
+    val presets = listOf(
+        "Kucing samurai misterius di hutan bambu bersalju dengan pedang bercahaya",
+        "Pemandangan kota futuristik neon cyberpunk saat hujan malam hari",
+        "Potret wanita anggun bergaya lukisan cat minyak era Renaissance",
+        "Rumah fantasi pohon raksasa dengan kunang-kunang di malam hari",
+        "Karakter anime petarung sihir dengan efek aura kosmik epik",
+        "Mobil sport vintage melaju di jalanan pesisir pantai matahari terbenam"
+    )
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(16.dp)
             )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Inspirasi Prompt Populer",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            presets.forEach { preset ->
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { onPromptSelected(preset) },
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text(
+                        text = preset.take(32) + "...",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StyleSelector(
+    selectedStyle: ArtStyle,
+    onStyleSelected: (ArtStyle) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            text = "Gaya Seni Visual AI",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(end = 16.dp)
+        ) {
+            items(ArtStylePresets.list) { style ->
+                val isSelected = style.id == selectedStyle.id
+                Card(
+                    modifier = Modifier
+                        .width(130.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable { onStyleSelected(style) }
+                        .testTag("style_chip_${style.id}"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = style.icon,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = style.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = style.description,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AspectRatioSelector(
+    selectedAspect: AspectOption,
+    onAspectSelected: (AspectOption) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            text = "Rasio Gambar (Aspect Ratio)",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AspectRatioPresets.options.forEach { option ->
+                val isSelected = option.ratio == selectedAspect.ratio
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onAspectSelected(option) },
+                    label = {
+                        Text(
+                            text = "${option.label} (${option.ratio})",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("aspect_chip_${option.ratio.replace(":", "_")}")
+                )
+            }
         }
     }
 }
