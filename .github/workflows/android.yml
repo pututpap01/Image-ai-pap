@@ -20,24 +20,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: Setup Gradle
+      - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
 
       - name: Prepare Keystore and Environment
         run: |
-          # Ensure gradlew has execution permission
-          chmod +x ./gradlew || true
-
-          # Prepare debug.keystore
+          # 1. Restore debug.keystore
           if [ -f "debug.keystore.base64" ]; then
             base64 -d debug.keystore.base64 > debug.keystore
-          else
-            echo "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" | base64 -d > debug.keystore
+          elif [ ! -f "debug.keystore" ]; then
+            keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-          # Ensure .env exists for Secrets Gradle Plugin
+          # 2. Prepare .env for Secrets Plugin
           if [ ! -f ".env" ]; then
             if [ -f ".env.example" ]; then
               cp .env.example .env
@@ -46,16 +44,19 @@ jobs:
             fi
           fi
 
-      - name: Build Debug APK
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace --no-daemon
-          else
-            gradle assembleDebug --stacktrace --no-daemon
+          # 3. Accept Android SDK Licenses if sdkmanager is available
+          if command -v sdkmanager &> /dev/null; then
+            yes | sdkmanager --licenses || true
+          elif [ -n "$ANDROID_HOME" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
           fi
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: AI-Image-Craft-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
