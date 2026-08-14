@@ -14,6 +14,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.GeneratedImageEntity
+import com.example.data.repository.GenerationResult
 import com.example.data.repository.ImageGeneratorEngine
 import com.example.data.repository.ImageRepository
 import com.example.ui.models.ArtStyle
@@ -83,7 +84,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _useRandomSeed = MutableStateFlow(true)
     val useRandomSeed: StateFlow<Boolean> = _useRandomSeed.asStateFlow()
 
-    private val _statusMessage = MutableStateFlow("Siap membuat gambar dengan model FLUX.1 Ultra HD")
+    // Engine Selection State: "flux" or "perchance"
+    private val _selectedEngine = MutableStateFlow("flux")
+    val selectedEngine: StateFlow<String> = _selectedEngine.asStateFlow()
+
+    private val _statusMessage = MutableStateFlow("Siap membuat gambar AI dengan antarmuka native cepat")
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
     private val _generationState = MutableStateFlow<GenerationUiState>(GenerationUiState.Idle)
@@ -117,6 +122,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _useRandomSeed.value = use
     }
 
+    fun setSelectedEngine(engine: String) {
+        _selectedEngine.value = engine
+        if (engine == "perchance") {
+            _statusMessage.value = "Engine Aktif: Perchance AI Model (Antarmuka Native Cepat)"
+        } else {
+            _statusMessage.value = "Engine Aktif: FLUX.1 Pro HD Neural Engine"
+        }
+    }
+
     fun setStatusMessage(status: String) {
         _statusMessage.value = status
     }
@@ -129,9 +143,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _statusMessage.value = "Prompt berhasil diperkaya dengan kata kunci artistik!"
     }
 
-    /**
-     * Generates image directly using FLUX.1 Neural Engine without any slow iframe/webview.
-     */
     fun generateImage() {
         val prompt = _promptText.value.trim()
         if (prompt.isEmpty()) {
@@ -145,34 +156,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _seed.value.ifEmpty { "428912" }
         }
 
-        _generationState.value = GenerationUiState.Generating("Menghubungi FLUX.1 Neural Engine...")
-        _statusMessage.value = "Memproses gambar via model FLUX.1 Pro HD..."
+        val isPerchance = _selectedEngine.value == "perchance"
+
+        _generationState.value = GenerationUiState.Generating(
+            if (isPerchance) "Menghubungkan ke Perchance AI Engine..." else "Menghubungkan ke FLUX.1 Neural Engine..."
+        )
+        _statusMessage.value = if (isPerchance) "Memproses gambar via Perchance AI..." else "Memproses gambar via FLUX.1 Pro HD..."
 
         viewModelScope.launch {
             try {
-                val (savedImagePath, engineUsed) = ImageGeneratorEngine.generateAndSaveImage(
-                    context = getApplication(),
-                    prompt = prompt,
-                    style = _selectedStyle.value.name,
-                    styleSuffix = _selectedStyle.value.promptSuffix,
-                    negativePrompt = _negativePrompt.value,
-                    aspectRatio = _selectedAspect.value.ratio,
-                    width = _selectedAspect.value.width,
-                    height = _selectedAspect.value.height,
-                    seed = currentSeed,
-                    onProgress = { progressStep ->
-                        _generationState.value = GenerationUiState.Generating(progressStep)
-                        _statusMessage.value = progressStep
-                    }
-                )
+                val result: GenerationResult = if (isPerchance) {
+                    ImageGeneratorEngine.generateWithPerchance(
+                        context = getApplication(),
+                        prompt = prompt,
+                        style = _selectedStyle.value.name,
+                        styleSuffix = _selectedStyle.value.promptSuffix,
+                        negativePrompt = _negativePrompt.value,
+                        aspectRatio = _selectedAspect.value.ratio,
+                        width = _selectedAspect.value.width,
+                        height = _selectedAspect.value.height,
+                        seed = currentSeed,
+                        onProgress = { progressStep ->
+                            _generationState.value = GenerationUiState.Generating(progressStep)
+                            _statusMessage.value = progressStep
+                        }
+                    )
+                } else {
+                    ImageGeneratorEngine.generateWithFlux(
+                        context = getApplication(),
+                        prompt = prompt,
+                        style = _selectedStyle.value.name,
+                        styleSuffix = _selectedStyle.value.promptSuffix,
+                        negativePrompt = _negativePrompt.value,
+                        aspectRatio = _selectedAspect.value.ratio,
+                        width = _selectedAspect.value.width,
+                        height = _selectedAspect.value.height,
+                        seed = currentSeed,
+                        onProgress = { progressStep ->
+                            _generationState.value = GenerationUiState.Generating(progressStep)
+                            _statusMessage.value = progressStep
+                        }
+                    )
+                }
 
                 val newEntity = GeneratedImageEntity(
                     prompt = prompt,
                     enhancedPrompt = prompt + " " + _selectedStyle.value.promptSuffix,
                     style = _selectedStyle.value.name,
                     aspectRatio = _selectedAspect.value.ratio,
-                    imageUrl = savedImagePath,
-                    engine = engineUsed,
+                    imageUrl = result.imagePath,
+                    engine = result.engineName,
                     negativePrompt = _negativePrompt.value
                 )
 
@@ -180,7 +213,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val savedEntity = newEntity.copy(id = id)
 
                 _generationState.value = GenerationUiState.Success(savedEntity)
-                _statusMessage.value = "Gambar berhasil dibuat & disimpan ke galeri lokal!"
+                _statusMessage.value = "Gambar (${result.engineName}) berhasil dibuat & disimpan!"
             } catch (e: Exception) {
                 _generationState.value = GenerationUiState.Error("Gagal membuat gambar: ${e.localizedMessage}")
                 _statusMessage.value = "Terjadi kesalahan saat memproses gambar"

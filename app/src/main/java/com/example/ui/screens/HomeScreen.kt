@@ -1,9 +1,6 @@
 package com.example.ui.screens
 
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
@@ -57,8 +55,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Brush as ComposeBrush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +82,7 @@ fun HomeScreen(
     val promptText by viewModel.promptText.collectAsState()
     val selectedStyle by viewModel.selectedStyle.collectAsState()
     val selectedAspect by viewModel.selectedAspect.collectAsState()
+    val selectedEngine by viewModel.selectedEngine.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
     val generationState by viewModel.generationState.collectAsState()
 
@@ -114,55 +114,85 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                 )
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary
-                                    )
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    ComposeBrush.linearGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "AI Image Studio",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (selectedEngine == "perchance") "Engine: Perchance AI Model" else "Engine: FLUX.1 Pro Ultra HD",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        IconButton(onClick = { showAdvancedSheet = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Pengaturan Lanjutan",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "AI Image Generator",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                    // Engine Selection Dual Toggle Cards (100% Native, Zero Web Lag)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        EngineOptionCard(
+                            title = "FLUX.1 Pro HD",
+                            subtitle = "Model FLUX Neural",
+                            icon = Icons.Default.FlashOn,
+                            isSelected = selectedEngine == "flux",
+                            onClick = { viewModel.setSelectedEngine("flux") },
+                            modifier = Modifier.weight(1f)
                         )
-                        Text(
-                            text = "FLUX.1 Ultra HD Neural Engine",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
 
-                    IconButton(onClick = { showAdvancedSheet = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Pengaturan Lanjutan",
-                            tint = MaterialTheme.colorScheme.primary
+                        EngineOptionCard(
+                            title = "Perchance AI",
+                            subtitle = "Model Perchance Asli",
+                            icon = Icons.Default.Brush,
+                            isSelected = selectedEngine == "perchance",
+                            onClick = { viewModel.setSelectedEngine("perchance") },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -183,7 +213,12 @@ fun HomeScreen(
                     value = promptText,
                     onValueChange = { viewModel.setPromptText(it) },
                     placeholder = {
-                        Text("Tulis deskripsi gambar detail yang ingin Anda buat...")
+                        Text(
+                            if (selectedEngine == "perchance")
+                                "Tulis prompt untuk model Perchance AI..."
+                            else
+                                "Tulis prompt detail untuk model FLUX.1 Pro..."
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -295,7 +330,7 @@ fun HomeScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(
-                    Brush.verticalGradient(
+                    ComposeBrush.verticalGradient(
                         colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
                     )
                 )
@@ -310,7 +345,7 @@ fun HomeScreen(
                 enabled = generationState !is GenerationUiState.Generating,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = if (selectedEngine == "perchance") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
                 )
             ) {
                 if (generationState is GenerationUiState.Generating) {
@@ -327,13 +362,13 @@ fun HomeScreen(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.FlashOn,
+                        imageVector = if (selectedEngine == "perchance") Icons.Default.Brush else Icons.Default.FlashOn,
                         contentDescription = null,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Generate Gambar AI",
+                        text = if (selectedEngine == "perchance") "Generate via Perchance AI" else "Generate via FLUX.1 Pro",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -365,6 +400,69 @@ fun HomeScreen(
                 onUseRandomSeedChange = { viewModel.setUseRandomSeed(it) },
                 onDismissRequest = { showAdvancedSheet = false }
             )
+        }
+    }
+}
+
+@Composable
+private fun EngineOptionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
