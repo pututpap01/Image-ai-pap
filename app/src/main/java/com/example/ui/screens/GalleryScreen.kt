@@ -1,10 +1,6 @@
 package com.example.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -32,9 +27,9 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.local.GeneratedImageEntity
 import com.example.ui.components.ImageResultDialog
@@ -71,6 +66,7 @@ fun GalleryScreen(
 ) {
     val allImages by viewModel.historyImages.collectAsState()
     val favoriteImages by viewModel.favoriteImages.collectAsState()
+    val context = LocalContext.current
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedImageForPreview by remember { mutableStateOf<GeneratedImageEntity?>(null) }
@@ -171,6 +167,7 @@ fun GalleryScreen(
                     viewModel.toggleFavorite(it)
                     selectedImageForPreview = entity.copy(isFavorite = !entity.isFavorite)
                 },
+                onSaveToGallery = { viewModel.saveImageToGallery(context, it) },
                 onDismissRequest = { selectedImageForPreview = null }
             )
         }
@@ -205,15 +202,25 @@ private fun GalleryImageCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .background(Color.Black)
+                    .background(Color(0xFF0F172A)),
+                contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(item.imageUrl)
-                        .crossfade(true)
+                        .crossfade(200)
                         .build(),
                     contentDescription = item.prompt,
                     contentScale = ContentScale.Crop,
+                    loading = {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
 

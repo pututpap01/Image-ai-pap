@@ -393,6 +393,7 @@ fun HomeScreen(
                 )
             ) {
                 if (generationState is GenerationUiState.Generating) {
+                    val stepText = (generationState as GenerationUiState.Generating).step
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = Color.White,
@@ -400,7 +401,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Memproses Gambar AI...",
+                        text = stepText,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -438,9 +439,11 @@ fun HomeScreen(
 
         if (generationState is GenerationUiState.Success) {
             val successState = generationState as GenerationUiState.Success
+            val currentContext = androidx.compose.ui.platform.LocalContext.current
             ImageResultDialog(
                 imageItem = successState.imageEntity,
                 onFavoriteToggle = { viewModel.toggleFavorite(it) },
+                onSaveToGallery = { viewModel.saveImageToGallery(currentContext, it) },
                 onDismissRequest = { viewModel.dismissResultDialog() }
             )
         }
